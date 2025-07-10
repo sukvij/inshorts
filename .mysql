@@ -1,0 +1,28 @@
+CREATE DATABASE news_db;
+USE news_db;
+
+CREATE TABLE news_articles (
+    id VARCHAR(36) PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    url VARCHAR(255),
+    publication_date DATETIME,
+    source_name VARCHAR(100),
+    category JSON,
+    relevance_score DOUBLE,
+    latitude DOUBLE,
+    longitude DOUBLE
+);
+
+INSERT INTO news_articles (id, title, description, url, publication_date, source_name, category, latitude, longitude)
+VALUES (
+    'b1793e11-85f1-47f4-b836-ddc21dd8991e',
+    'Paris police chase over running of red light ends in pileup | DW News',
+    'Paris police chase over running of red light ends in pileup | DW News...',
+    'https://www.youtube.com/@dwnews',
+    '2025-03-24 11:08:11',
+    'DW',
+    '["General"]',
+    21.754075,
+    80.560129
+);
