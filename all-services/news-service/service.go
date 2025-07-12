@@ -16,7 +16,22 @@ func (service *NewsService) CreateNewsArticle() error {
 	return repo.CreateNewsArticle()
 }
 
-func (service *NewsService) GetNewsArticles() (*[]NewsArticle, error) {
+func (service *NewsService) GetNewsArticlesByCategory(category string) (*[]NewsArticle, error) {
 	repo := _NewRepository(service.DB, service.NewsArticle)
-	return repo.GetNewsArticles()
+	return repo.GetNewsArticlesByCategory(category)
+}
+
+func (service *NewsService) GetNewsArticlesByScore(score float64) (*[]NewsArticle, error) {
+	repo := _NewRepository(service.DB, service.NewsArticle)
+	return repo.GetNewsArticlesByScore(score)
+}
+
+func (service *NewsService) GetNewsArticlesBySource(source string) (*[]NewsArticle, error) {
+	repo := _NewRepository(service.DB, service.NewsArticle)
+	return repo.GetNewsArticlesBySource(source)
+}
+
+func (service *NewsService) GetNearByNewsArticle(lat, lon, radius float64) (*[]NewsArticle, error) {
+	repo := _NewRepository(service.DB, service.NewsArticle)
+	return repo.GetNearByNewsArticle(lat, lon, radius)
 }

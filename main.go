@@ -29,6 +29,57 @@ type PredictResponse struct {
 	Intent   string   `json:"intent"`
 }
 
+// const mlServiceURL = "http://127.0.0.1:5000/predict" // URL of your Python ML service
+
+// func fetchResults(c *gin.Context) {
+// 	var req QueryRequest
+// 	if err := c.ShouldBindJSON(&req); err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+// 		return
+// 	}
+
+// 	// Prepare request for ML service
+// 	jsonReqBody, err := json.Marshal(req)
+// 	if err != nil {
+// 		log.Printf("Error marshaling request to ML service: %v", err)
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to prepare ML service request"})
+// 		return
+// 	}
+
+// 	// Make POST request to ML service
+// 	resp, err := http.Post(mlServiceURL, "application/json", bytes.NewBuffer(jsonReqBody))
+// 	if err != nil {
+// 		log.Printf("Error connecting to ML service: %v", err)
+// 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ML service unavailable or error connecting"})
+// 		return
+// 	}
+// 	defer resp.Body.Close()
+
+// 	// Read response from ML service
+// 	body, err := ioutil.ReadAll(resp.Body)
+// 	if err != nil {
+// 		log.Printf("Error reading response from ML service: %v", err)
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read response from ML service"})
+// 		return
+// 	}
+
+// 	if resp.StatusCode != http.StatusOK {
+// 		log.Printf("ML service returned non-200 status: %d, body: %s", resp.StatusCode, string(body))
+// 		c.JSON(http.StatusBadGateway, gin.H{"error": fmt.Sprintf("ML service error: %s", string(body))})
+// 		return
+// 	}
+
+// 	var mlResponse PredictResponse
+// 	if err := json.Unmarshal(body, &mlResponse); err != nil {
+// 		log.Printf("Error unmarshaling ML service response: %v, body: %s", err, string(body))
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse ML service response"})
+// 		return
+// 	}
+
+// 	// Return the ML service's response to the client
+// 	c.JSON(http.StatusOK, mlResponse)
+// }
+
 func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

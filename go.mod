@@ -5,6 +5,7 @@ go 1.23.1
 require (
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-redis/redis v6.15.9+incompatible
+	github.com/jinzhu/copier v0.4.0
 	github.com/spf13/viper v1.20.1
 	go.opentelemetry.io/otel v1.37.0
 	go.opentelemetry.io/otel/exporters/jaeger v1.17.0
