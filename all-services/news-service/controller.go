@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	llmservice "github.com/sukvij/inshorts/all-services/llm-service"
 	"gorm.io/gorm"
 )
 
@@ -108,5 +109,16 @@ func (controller *NewsController) getNearByNewsArticle(ctx *gin.Context) {
 }
 
 func (controller *NewsController) getNewsArticleBySearch(ctx *gin.Context) {
-
+	query, _ := ctx.GetQuery("query")
+	fmt.Println("doing")
+	llmOutput, err := llmservice.FindLLMEntity(query)
+	fmt.Println(llmOutput, err)
+	fmt.Println("done")
+	if err != nil || llmOutput == nil {
+		ctx.JSON(200, gin.H{"res": nil, "err": err})
+		return
+	}
+	service := _NewService(controller.DB, &[]NewsArticle{})
+	res, err := service.GetNewsArticleBySearch(llmOutput)
+	ctx.JSON(200, gin.H{"res": res, "err": err})
 }

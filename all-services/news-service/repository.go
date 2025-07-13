@@ -79,3 +79,14 @@ func (repo *NewsRepository) GetNearByNewsArticle(lat, lon, radius float64) (*[]N
 
 	return &result, nil
 }
+
+func (repo *NewsRepository) GetNewsArticleBySearch(whereClause string, arg []interface{}) (*[]NewsArticle, error) {
+	var result []NewsArticle
+	err := repo.DB.Where(whereClause, arg...).Find(&result).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch articles from DB: %v", err)
+	}
+
+	return &result, nil
+}
