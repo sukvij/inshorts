@@ -7,60 +7,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
 	"text/template"
 
-	// For publication_date parsing
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
-
-// --- Search Function ---
-// Searches for entities within article titles and descriptions.
-// searchArticlesFromDB fetches articles from the database based on LLM entities.
-func searchArticlesFromDB(db *gorm.DB, llmEntities string) ([]Article, error) {
-	var articles []Article
-
-	// 1. Prepare search terms from the LLM entities string
-	searchTerms := []string{}
-	for _, term := range strings.Split(llmEntities, ",") {
-		cleanedTerm := strings.TrimSpace(term)
-		if cleanedTerm != "" {
-			searchTerms = append(searchTerms, strings.ToLower(cleanedTerm)) // Convert to lowercase for case-insensitive search
-		}
-	}
-
-	if len(searchTerms) == 0 {
-		return []Article{}, nil // No search terms, return empty slice
-	}
-
-	// 2. Build the GORM query dynamically
-	// We'll construct a WHERE clause like:
-	// (LOWER(title) LIKE '%term1%' OR LOWER(description) LIKE '%term1%') OR
-	// (LOWER(title) LIKE '%term2%' OR LOWER(description) LIKE '%term2%') OR ...
-	var conditions []string
-	var args []interface{}
-
-	for _, term := range searchTerms {
-		// Use '?' as placeholder for arguments to prevent SQL injection
-		conditions = append(conditions, "(LOWER(title) LIKE ? OR LOWER(description) LIKE ?)")
-		args = append(args, "%"+term+"%", "%"+term+"%")
-	}
-
-	// Combine all conditions with OR
-	whereClause := strings.Join(conditions, " OR ")
-
-	// 3. Execute the GORM query
-	// The `db.Where()` method builds the WHERE clause.
-	// `db.Find()` executes the query and populates the `articles` slice.
-	result := db.Where(whereClause, args...).Find(&articles)
-
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to fetch articles from DB: %w", result.Error)
-	}
-
-	return articles, nil
-}
 
 // --- Main Application Logic ---
 

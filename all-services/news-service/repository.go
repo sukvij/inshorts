@@ -36,7 +36,7 @@ func (repo *NewsRepository) GetNewsArticlesByCategory(category string) (*[]NewsA
 
 	// Use GORM's Where clause with MySQL's JSON_CONTAINS function.
 	// JSON_CONTAINS(json_doc, val) returns 1 if val is found in json_doc.
-	err := repo.DB.Where("JSON_CONTAINS(category, ?)", string(marshaledCategory)).Find(&result).Error
+	err := repo.DB.Where("JSON_CONTAINS(category, ?)", string(marshaledCategory)).Order("publication_date desc").Find(&result).Error
 
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (repo *NewsRepository) GetNewsArticlesByCategory(category string) (*[]NewsA
 
 func (repo *NewsRepository) GetNewsArticlesByScore(score float64) (*[]NewsArticle, error) {
 	var result []NewsArticle
-	err := repo.DB.Where("relevance_score > ?", score).Find(&result).Error
+	err := repo.DB.Where("relevance_score > ?", score).Order("relevance_score desc").Find(&result).Error
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (repo *NewsRepository) GetNewsArticlesByScore(score float64) (*[]NewsArticl
 
 func (repo *NewsRepository) GetNewsArticlesBySource(source string) (*[]NewsArticle, error) {
 	var result []NewsArticle
-	err := repo.DB.Where("source_name = ?", source).Find(&result).Error
+	err := repo.DB.Where("source_name = ?", source).Order("publication_date desc").Find(&result).Error
 	if err != nil {
 		return nil, err
 	}
@@ -66,13 +66,35 @@ func (repo *NewsRepository) GetNewsArticlesBySource(source string) (*[]NewsArtic
 func (repo *NewsRepository) GetNearByNewsArticle(lat, lon, radius float64) (*[]NewsArticle, error) {
 	var result []NewsArticle
 
-	query := `
-		ST_DISTANCE_SPHERE(
-			POINT(longitude, latitude),    
-			POINT(?, ?)                    
-		) <= ?
-	`
-	err := repo.DB.Where(query, lon, lat, radius).Find(&result).Error
+	query := fmt.Sprintf(`
+								SELECT
+								*,
+								(
+									6371 * -- Earth's radius in kilometers
+									ACOS(
+										COS(RADIANS(%v)) * COS(RADIANS(latitude)) *
+										COS(RADIANS(longitude) - RADIANS(%v)) +
+										SIN(RADIANS(%v)) * SIN(RADIANS(latitude))
+									)
+								) AS distance 
+							FROM
+								news_articles
+							WHERE
+								(
+									6371 * -- Earth's radius in kilometers
+									ACOS(
+										COS(RADIANS(%v)) * COS(RADIANS(latitude)) *
+										COS(RADIANS(longitude) - RADIANS(%v)) +
+										SIN(RADIANS(%v)) * SIN(RADIANS(latitude))
+									)
+								) <= %v 
+							ORDER BY
+								distance 
+							LIMIT 2;
+								
+								`, lat, lon, lat, lat, lon, lat, radius)
+
+	err := repo.DB.Raw(query).Scan(&result).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch points of interest within radius: %w", err)
 	}

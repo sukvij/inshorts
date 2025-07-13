@@ -45,3 +45,7 @@ Bonus API
     TRending news feed --> tailored to a user's location. This should simulate a feed similar to “what’s trending near me” based on recent user engagement with articles
 
 
+
+
+For "search", rank by a combination of relevance_score and text matching score
+(how well the title/description matches the search query)

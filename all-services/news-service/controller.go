@@ -105,7 +105,13 @@ func (controller *NewsController) getNearByNewsArticle(ctx *gin.Context) {
 		ctx.JSON(500, err)
 		return
 	}
-	ctx.JSON(200, Convert_NewsArticle_To_NewsArticleResponse(result))
+	updatedResponse := Convert_NewsArticle_To_NewsArticleResponse(result)
+	// var summaries []string
+	for i := 0; i < len(*updatedResponse); i++ {
+		haha := llmservice.GenerateSummeryLLM((*updatedResponse)[i].Title, (*updatedResponse)[i].Description)
+		(*updatedResponse)[i].LLMSummery = haha
+	}
+	ctx.JSON(200, updatedResponse)
 }
 
 func (controller *NewsController) getNewsArticleBySearch(ctx *gin.Context) {
