@@ -5,9 +5,9 @@ CREATE TABLE news_articles (
     id VARCHAR(36) PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT,
-    url VARCHAR(255),
+    url VARCHAR(4000),
     publication_date DATETIME,
-    source_name VARCHAR(100),
+    source_name VARCHAR(255),
     category JSON,
     relevance_score DOUBLE,
     latitude DOUBLE,
@@ -25,4 +25,20 @@ VALUES (
     '["General"]',
     21.754075,
     80.560129
+);
+
+CREATE TABLE user_interactions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY, -- Each interaction is a unique record
+    user_id VARCHAR(255) NOT NULL,        -- Unique ID for the user
+    article_id VARCHAR(255) NOT NULL,           -- Foreign key to news_articles table
+    event_type VARCHAR(50) NOT NULL,      -- 'view', 'click', 'like', 'share'
+    event_timestamp DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6), -- DATETIME(6) for microsecond precision
+    user_lat DECIMAL(10, 8) NOT NULL,     -- Latitude of the user
+    user_lon DECIMAL(11, 8) NOT NULL,     -- Longitude of the user
+    -- Indexes for efficient querying
+    INDEX idx_article_id (article_id),
+    INDEX idx_event_type (event_type),
+    INDEX idx_event_timestamp (event_timestamp),
+    -- Combined index for common trending filters
+    INDEX idx_trending_filter (event_timestamp, user_lat, user_lon, article_id)
 );

@@ -41,8 +41,8 @@ type FinalResponse struct {
 	Meta       *Meta     `json:"meta"`
 }
 
-func JSONResponse(ctx *gin.Context, err error, data interface{}, totalTime int64) {
-	response := &FinalResponse{Data: data, Meta: &Meta{LatencyMs: totalTime}}
+func JSONResponse(ctx *gin.Context, err error, data interface{}) {
+	response := &FinalResponse{Data: data, Meta: &Meta{}}
 	if err == nil {
 		response.Success = true
 		response.StatusCode = 200

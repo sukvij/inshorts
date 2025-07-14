@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	llmservice "github.com/sukvij/inshorts/all-services/llm-service"
+	"github.com/sukvij/inshorts/inshortfers/response"
 	"gorm.io/gorm"
 )
 
@@ -30,13 +31,15 @@ func NewsServiceController(appGroup *gin.RouterGroup, db *gorm.DB) {
 	app.GET("/source", controller.getNewsArticlesBySource)
 	app.GET("/nearby", controller.getNearByNewsArticle)
 	app.GET("/search", controller.getNewsArticleBySearch)
+	// app.GET("/trending", controller.getTrendingNewsNearByMe)
+
 }
 
 func (controller *NewsController) createNewsArticle(ctx *gin.Context) {
 	var newsArticleInput []NewsArticleUserInuut
 	bindingErro := ctx.ShouldBindJSON(&newsArticleInput)
 	if bindingErro != nil {
-		ctx.JSON(200, "binding erro")
+		response.JSONResponse(ctx, bindingErro, nil)
 		return
 	}
 
@@ -44,7 +47,7 @@ func (controller *NewsController) createNewsArticle(ctx *gin.Context) {
 
 	service := _NewService(controller.DB, newsArticle)
 	err := service.CreateNewsArticle()
-	ctx.JSON(200, err)
+	response.JSONResponse(ctx, err, nil)
 }
 
 func (controller *NewsController) getNewsArticlesByCategory(ctx *gin.Context) {
@@ -54,24 +57,31 @@ func (controller *NewsController) getNewsArticlesByCategory(ctx *gin.Context) {
 	service := _NewService(controller.DB, &newsArticle)
 	result, err := service.GetNewsArticlesByCategory(category)
 	if err != nil {
-		ctx.JSON(500, err)
+		response.JSONResponse(ctx, err, result)
 		return
 	}
-	ctx.JSON(200, Convert_NewsArticle_To_NewsArticleResponse(result))
+	response.JSONResponse(ctx, err, Convert_NewsArticle_To_NewsArticleResponse(result))
 }
 
 func (controller *NewsController) getNewsArticlesByScore(ctx *gin.Context) {
 	var newsArticle []NewsArticle
-	x, _ := ctx.GetQuery("val")
-	score, _ := strconv.ParseFloat(x, 64)
-	fmt.Println(score)
+	x, founded := ctx.GetQuery("val")
+	if !founded {
+		response.JSONResponse(ctx, fmt.Errorf("query param score is not present"), nil)
+		return
+	}
+	score, err := strconv.ParseFloat(x, 64)
+	if err != nil {
+		response.JSONResponse(ctx, err, nil)
+		return
+	}
 	service := _NewService(controller.DB, &newsArticle)
 	result, err := service.GetNewsArticlesByScore(score)
 	if err != nil {
-		ctx.JSON(500, err)
+		response.JSONResponse(ctx, err, result)
 		return
 	}
-	ctx.JSON(200, result)
+	response.JSONResponse(ctx, err, Convert_NewsArticle_To_NewsArticleResponse(result))
 }
 
 func (controller *NewsController) getNewsArticlesBySource(ctx *gin.Context) {
@@ -83,48 +93,75 @@ func (controller *NewsController) getNewsArticlesBySource(ctx *gin.Context) {
 	service := _NewService(controller.DB, &newsArticle)
 	result, err := service.GetNewsArticlesBySource(source)
 	if err != nil {
-		ctx.JSON(500, err)
+		response.JSONResponse(ctx, err, result)
 		return
 	}
-	ctx.JSON(200, Convert_NewsArticle_To_NewsArticleResponse(result))
+	response.JSONResponse(ctx, err, Convert_NewsArticle_To_NewsArticleResponse(result))
 }
 
 func (controller *NewsController) getNearByNewsArticle(ctx *gin.Context) {
 	var newsArticle []NewsArticle
-	x, _ := ctx.GetQuery("lat")
-	y, _ := ctx.GetQuery("lon")
-	z, _ := ctx.GetQuery("radius")
-	lat, _ := strconv.ParseFloat(x, 64)
-	lon, _ := strconv.ParseFloat(y, 64)
-	radius, _ := strconv.ParseFloat(z, 64)
+	x, founded := ctx.GetQuery("lat")
+	if !founded {
+		response.JSONResponse(ctx, fmt.Errorf("query param lat is not present"), nil)
+		return
+	}
+	y, founded := ctx.GetQuery("lon")
+	if !founded {
+		response.JSONResponse(ctx, fmt.Errorf("query param lon is not present"), nil)
+		return
+	}
+	z, founded := ctx.GetQuery("radius")
+	if !founded {
+		response.JSONResponse(ctx, fmt.Errorf("query param radius is not present"), nil)
+		return
+	}
+	lat, err := strconv.ParseFloat(x, 64)
+	if err != nil {
+		response.JSONResponse(ctx, err, nil)
+	}
+	lon, err := strconv.ParseFloat(y, 64)
+	if err != nil {
+		response.JSONResponse(ctx, err, nil)
+	}
+	radius, err := strconv.ParseFloat(z, 64)
+	if err != nil {
+		response.JSONResponse(ctx, err, nil)
+	}
 	fmt.Println("lat, log, radius", lat, lon, radius)
 
 	service := _NewService(controller.DB, &newsArticle)
 	result, err := service.GetNearByNewsArticle(lat, lon, radius)
 	if err != nil {
-		ctx.JSON(500, err)
+		response.JSONResponse(ctx, err, result)
 		return
 	}
 	updatedResponse := Convert_NewsArticle_To_NewsArticleResponse(result)
 	// var summaries []string
-	for i := 0; i < len(*updatedResponse); i++ {
-		haha := llmservice.GenerateSummeryLLM((*updatedResponse)[i].Title, (*updatedResponse)[i].Description)
-		(*updatedResponse)[i].LLMSummery = haha
-	}
-	ctx.JSON(200, updatedResponse)
+	// for i := 0; i < len(*updatedResponse); i++ {
+	// 	haha := llmservice.GenerateSummeryLLM((*updatedResponse)[i].Title, (*updatedResponse)[i].Description)
+	// 	(*updatedResponse)[i].LLMSummery = haha
+	// }
+	response.JSONResponse(ctx, err, updatedResponse)
 }
 
 func (controller *NewsController) getNewsArticleBySearch(ctx *gin.Context) {
-	query, _ := ctx.GetQuery("query")
-	fmt.Println("doing")
+	query, founded := ctx.GetQuery("query")
+	if !founded {
+		response.JSONResponse(ctx, fmt.Errorf("query param search not founded"), nil)
+		return
+	}
+
 	llmOutput, err := llmservice.FindLLMEntity(query)
-	fmt.Println(llmOutput, err)
-	fmt.Println("done")
-	if err != nil || llmOutput == nil {
-		ctx.JSON(200, gin.H{"res": nil, "err": err})
+	if err != nil {
+		response.JSONResponse(ctx, err, nil)
 		return
 	}
 	service := _NewService(controller.DB, &[]NewsArticle{})
 	res, err := service.GetNewsArticleBySearch(llmOutput)
-	ctx.JSON(200, gin.H{"res": res, "err": err})
+	if err != nil {
+		response.JSONResponse(ctx, err, nil)
+		return
+	}
+	response.JSONResponse(ctx, err, Convert_NewsArticle_To_NewsArticleResponse(res))
 }

@@ -58,15 +58,19 @@ func (service *NewsService) GetNewsArticleBySearch(llmOutput *llmservice.ParsedL
 	}
 
 	// (LOWER(title) LIKE '%term1%' OR LOWER(description) LIKE '%term1%') OR
-	var conditions []string
+	// var conditions []string
 	var args []interface{}
 
-	for _, term := range searchTerms {
-		conditions = append(conditions, "(LOWER(title) LIKE ? OR LOWER(description) LIKE ?)")
-		args = append(args, "%"+term+"%", "%"+term+"%")
-	}
-
-	whereClause := strings.Join(conditions, " OR ")
+	// for _, term := range searchTerms {
+	// 	conditions = append(conditions, "(LOWER(title) LIKE ? OR LOWER(description) LIKE ?)")
+	// 	args = append(args, "%"+term+"%", "%"+term+"%")
+	// }
+	// for _, term := range searchTerms {
+	// 	conditions = append(conditions, term)
+	// 	// args = append(args, "%"+term+"%", "%"+term+"%")
+	// }
+	whereClause := strings.Join(searchTerms, " ")
+	fmt.Println("where clause if ", whereClause)
 	repo := _NewRepository(service.DB, service.NewsArticle)
 	return repo.GetNewsArticleBySearch(whereClause, args)
 }

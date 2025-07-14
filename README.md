@@ -49,3 +49,40 @@ Bonus API
 
 For "search", rank by a combination of relevance_score and text matching score
 (how well the title/description matches the search query)
+
+
+# Trending news
+    receive lat, lon and limit from user
+    Selects news_articles data.
+    Joins with user_interactions.
+    Filters user_interactions based on event_timestamp (e.g., last 24 hours) and distance from the requested lat/lon using the Haversine formula.
+
+    Aggregates the weighted event_types for each article_id.
+
+    Calculates the final trending_score for each article.
+
+    Orders the results by trending_score in descending order.
+
+    Applies the LIMIT.
+
+# user_interactions
+    store in table that how user interact with with your articles.
+    article_id
+    event_type
+    event_timestamp
+    lat
+    lon
+
+    weight --> event type
+
+
+
+    SUM(
+    CASE ui.event_type
+        WHEN 'view' THEN 1.0
+        WHEN 'click' THEN 2.0
+        WHEN 'like' THEN 3.0
+        WHEN 'share' THEN 5.0
+        ELSE 0.0 -- Handle any unexpected event types
+    END
+) AS weighted_interaction_score
