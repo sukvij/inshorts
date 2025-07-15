@@ -11,30 +11,23 @@ CREATE TABLE news_articles (
     category JSON,
     relevance_score DOUBLE,
     latitude DOUBLE,
-    longitude DOUBLE
+    longitude DOUBLE,
+    INDEX idx_source_name (source_name),
+    INDEX idx_relevance_score (relevance_score)
 );
 
-INSERT INTO news_articles (id, title, description, url, publication_date, source_name, category, latitude, longitude)
-VALUES (
-    'b1793e11-85f1-47f4-b836-ddc21dd8991e',
-    'Paris police chase over running of red light ends in pileup | DW News',
-    'Paris police chase over running of red light ends in pileup | DW News...',
-    'https://www.youtube.com/@dwnews',
-    '2025-03-24 11:08:11',
-    'DW',
-    '["General"]',
-    21.754075,
-    80.560129
-);
 
 CREATE TABLE user_interactions (
     id BIGINT AUTO_INCREMENT PRIMARY KEY, -- Each interaction is a unique record
     user_id VARCHAR(255) NOT NULL,        -- Unique ID for the user
     article_id VARCHAR(255) NOT NULL,           -- Foreign key to news_articles table
     event_type VARCHAR(50) NOT NULL,      -- 'view', 'click', 'like', 'share'
-    event_timestamp DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6), -- DATETIME(6) for microsecond precision
+    event_time_stamp DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6), -- DATETIME(6) for microsecond precision
     user_lat DECIMAL(10, 8) NOT NULL,     -- Latitude of the user
     user_lon DECIMAL(11, 8) NOT NULL,     -- Longitude of the user
+
+    -- foreign key
+    Foreign key (article_id) REFERENCES  news_articles(id),
     -- Indexes for efficient querying
     INDEX idx_article_id (article_id),
     INDEX idx_event_type (event_type),
@@ -42,3 +35,53 @@ CREATE TABLE user_interactions (
     -- Combined index for common trending filters
     INDEX idx_trending_filter (event_timestamp, user_lat, user_lon, article_id)
 );
+
+
+
+
+
+-- explain quert step by step
+--     SELECT
+--     na.id,
+--     na.title,
+--     na.description,
+--     na.relevance_score,
+--     SUM(
+--         CASE ui.event_type
+--             WHEN 'view' THEN 1.0
+--             WHEN 'click' THEN 2.0
+--             WHEN 'like' THEN 3.0
+--             WHEN 'share' THEN 5.0
+--             ELSE 0.0
+--         END
+--     ) AS weighted_interaction_score,
+--     COUNT(DISTINCT ui.user_id) AS unique_users_count,
+--     (
+--         SUM(
+--             CASE ui.event_type
+--                 WHEN 'view' THEN 1.0
+--                 WHEN 'click' THEN 2.0
+--                 WHEN 'like' THEN 3.0
+--                 WHEN 'share' THEN 5.0
+--                 ELSE 0.0
+--             END
+--         ) * 0.6
+--     ) +
+--     (
+--         COUNT(DISTINCT ui.user_id) * 0.4
+--     ) AS combined_trending_score
+-- FROM
+--     news_articles AS na
+-- JOIN
+--     user_interactions AS ui ON na.id = ui.article_id
+-- WHERE
+--     ui.event_time_stamp >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+--     -- AND ST_Distance_Sphere(POINT(ui.user_lon, ui.user_lat), POINT(?, ?)) <= ?
+-- GROUP BY
+--     na.id, na.title, na.description, na.relevance_score
+-- HAVING
+--     combined_trending_score > 0
+-- ORDER BY
+--     combined_trending_score DESC, 
+--     na.relevance_score DESC,      
+--     na.id ASC;                    

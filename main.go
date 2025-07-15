@@ -12,22 +12,9 @@ import (
 	allservices "github.com/sukvij/inshorts/all-services"
 	"github.com/sukvij/inshorts/inshortfers/database"
 	"github.com/sukvij/inshorts/inshortfers/logs"
+	redisservice "github.com/sukvij/inshorts/inshortfers/redis-service"
 	"github.com/sukvij/inshorts/inshortfers/tracing"
 )
-
-// Define structs to match the expected JSON input/output
-type QueryRequest struct {
-	Query string `json:"query"`
-}
-
-type PredictResponse struct {
-	Entities []struct {
-		Text string `json:"text"`
-		Type string `json:"type"`
-	} `json:"entities"`
-	Concepts []string `json:"concepts"`
-	Intent   string   `json:"intent"`
-}
 
 func main() {
 	quit := make(chan os.Signal, 1)
@@ -49,7 +36,8 @@ func main() {
 
 	tracker := tracing.InitTracer()
 	fmt.Println(db, logsForError, tracker)
+	redis := redisservice.NewRedisClient()
 	app := gin.Default()
-	allservices.RouteService(app, db, logsForError, tracker)
+	allservices.RouteService(app, db, logsForError, tracker, redis)
 	app.Run(":8080")
 }

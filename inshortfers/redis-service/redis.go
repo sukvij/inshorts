@@ -23,20 +23,20 @@ func NewRedisClient() *redis.Client {
 	return client
 }
 
-func SetValue(redisClient *redis.Client, key string, value interface{}) error {
+func SetValueToRedis(redisClient *redis.Client, key string, value interface{}) error {
 
 	jsonValue, err := json.Marshal(value)
 	if err != nil {
 		return fmt.Errorf("failed to marshal value: %v", err)
 	}
-	err = redisClient.Set(key, jsonValue, 10*time.Second).Err()
+	err = redisClient.Set(key, jsonValue, 3600*time.Second).Err()
 	if err != nil {
 		return fmt.Errorf("set key problem for val %v and err is %v", value, err)
 	}
 	return redis.Nil
 }
 
-func GetValue(redisClient *redis.Client, key string) (interface{}, error) {
+func GetValueFromRedis(redisClient *redis.Client, key string) (interface{}, error) {
 	byteVal, err := redisClient.Get(key).Result()
 	if err != nil {
 		return "", fmt.Errorf("get key problem for key %v and err is %v", key, err)
