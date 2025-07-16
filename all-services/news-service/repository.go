@@ -36,7 +36,7 @@ func (repo *NewsRepository) GetNewsArticlesByCategory(category string) (*[]NewsA
 
 	// Use GORM's Where clause with MySQL's JSON_CONTAINS function.
 	// JSON_CONTAINS(json_doc, val) returns 1 if val is found in json_doc.
-	err := repo.DB.Where("JSON_CONTAINS(category, ?)", string(marshaledCategory)).Order("publication_date desc").Limit(3).Find(&result).Error
+	err := repo.DB.Where("JSON_CONTAINS(category, ?)", string(marshaledCategory)).Order("publication_date desc").Limit(1).Find(&result).Error
 
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (repo *NewsRepository) GetNewsArticlesByCategory(category string) (*[]NewsA
 
 func (repo *NewsRepository) GetNewsArticlesByScore(score float64) (*[]NewsArticle, error) {
 	var result []NewsArticle
-	err := repo.DB.Where("relevance_score > ?", score).Order("relevance_score desc").Limit(3).Find(&result).Error
+	err := repo.DB.Where("relevance_score > ?", score).Order("relevance_score desc").Limit(1).Find(&result).Error
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (repo *NewsRepository) GetNewsArticlesByScore(score float64) (*[]NewsArticl
 
 func (repo *NewsRepository) GetNewsArticlesBySource(source string) (*[]NewsArticle, error) {
 	var result []NewsArticle
-	err := repo.DB.Where("source_name = ?", source).Order("publication_date desc").Limit(3).Find(&result).Error
+	err := repo.DB.Where("source_name = ?", source).Order("publication_date desc").Limit(1).Find(&result).Error
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (repo *NewsRepository) GetNearByNewsArticle(lat, lon, radius float64) (*[]N
 								) <= %v 
 							ORDER BY
 								distance 
-							LIMIT 2;
+							LIMIT 1;
 								
 								`, lat, lon, lat, lat, lon, lat, radius)
 
@@ -121,11 +121,11 @@ func (repo *NewsRepository) GetNewsArticleBySearch(whereClause string, arg []int
         ORDER BY
             combined_score DESC,    -- Primary sort by the combined ranking score (highest first)
             p.relevance_score DESC
-		LIMIT 2
+		LIMIT 1
     `
 
 	var result []NewsArticle
-	err := repo.DB.Raw(sqlQuery, variable, variable, variable).Limit(2).Scan(&result).Error
+	err := repo.DB.Raw(sqlQuery, variable, variable, variable).Limit(1).Scan(&result).Error
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch articles from DB: %v", err)

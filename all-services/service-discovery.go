@@ -12,6 +12,6 @@ import (
 
 func RouteService(engine *gin.Engine, db *gorm.DB, logs *logs.AgreeGateLoager, tracker *trace.TracerProvider, redis *redis.Client) {
 	app := engine.Group("/v1")
-	newsservice.NewsServiceController(app, db) //        /v1/news-article   --> this is the endpoints
+	newsservice.NewsServiceController(app, db, redis) //        /v1/news-article   --> this is the endpoints
 	interactionservice.UserInteractionController(app, db, redis, logs)
 }

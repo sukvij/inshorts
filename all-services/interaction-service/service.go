@@ -2,14 +2,9 @@ package interactionservice
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"strconv"
 
 	"github.com/go-redis/redis"
-	"github.com/mmcloughlin/geohash"
 	newsservice "github.com/sukvij/inshorts/all-services/news-service"
-	redisservice "github.com/sukvij/inshorts/inshortfers/redis-service"
 	"go.opentelemetry.io/otel"
 	"gorm.io/gorm"
 )
@@ -29,33 +24,12 @@ func (service *InteractionService) CreateUserInteraction() error {
 	return repo.CreateUserInteraction()
 }
 
-func (service *InteractionService) TrendingNewsArticles(lat, lon, limit string) (*[]newsservice.NewsArticle, error) {
-	lat1, _ := strconv.ParseFloat(lat, 64)
-	lon1, _ := strconv.ParseFloat(lon, 64)
-	radiusMeters := 100000
-	limit1, _ := strconv.Atoi(limit)
-	geohashPrecision := 6
-	geoHashKey := geohash.EncodeWithPrecision(lat1, lon1, uint(geohashPrecision))
-	cacheKey := fmt.Sprintf("trending:%s:limit%d:radius%d", geoHashKey, limit1, radiusMeters)
-	fmt.Println("key is this bro", cacheKey)
+func (service *InteractionService) TrendingNewsArticles(lat, lon float64, limit int, cacheKey string, radiusMeter int) (*[]newsservice.NewsArticle, error) {
 
-	childContext, span := otel.Tracer("function controller").Start(context.Background(), "service redis data fetch")
+	_, span := otel.Tracer("function controller").Start(context.Background(), "service redis data fetch")
 	defer span.End()
-	// check if data is rpesent in cache or not
-	val, err := redisservice.GetValueFromRedis(service.Redis, cacheKey)
-	if err == redis.Nil {
-		var ans []newsservice.NewsArticle
-		temp, _ := json.Marshal(val)
-		json.Unmarshal(temp, &ans)
-		return &ans, nil
-	}
-	fmt.Println("database me jaa rha h matlab --> redis khali")
-	_, span1 := otel.Tracer("function controller").Start(childContext, "database fetched ")
-	defer span1.End()
+
 	repo := _NewRepository(service.DB, service.Interactions)
-	res, errs := repo.TrendingNewsArticles(lat1, lon1, limit1, radiusMeters)
-	if errs == nil {
-		redisservice.SetValueToRedis(service.Redis, cacheKey, *res)
-	}
+	res, errs := repo.TrendingNewsArticles(lat, lon, limit, radiusMeter)
 	return res, errs
 }

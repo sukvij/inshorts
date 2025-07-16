@@ -1,11 +1,14 @@
 package newsservice
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis"
 	llmservice "github.com/sukvij/inshorts/all-services/llm-service"
+	redisservice "github.com/sukvij/inshorts/inshortfers/redis-service"
 	"github.com/sukvij/inshorts/inshortfers/response"
 	"gorm.io/gorm"
 )
@@ -13,18 +16,19 @@ import (
 type NewsController struct {
 	DB          *gorm.DB
 	NewsArticle []*NewsArticle
+	Redis       *redis.Client
 }
 
-func _NewController(db *gorm.DB) *NewsController {
-	return &NewsController{DB: db}
+func _NewController(db *gorm.DB, redis *redis.Client) *NewsController {
+	return &NewsController{DB: db, Redis: redis}
 }
 
 // /api/news/category, /api/news/search,
 // /api/news/nearby
 
-func NewsServiceController(appGroup *gin.RouterGroup, db *gorm.DB) {
+func NewsServiceController(appGroup *gin.RouterGroup, db *gorm.DB, redis *redis.Client) {
 	app := appGroup.Group("/news")
-	controller := _NewController(db)
+	controller := _NewController(db, redis)
 	app.POST("", controller.createNewsArticle)
 	app.GET("/category", controller.getNewsArticlesByCategory)
 	app.GET("/score", controller.getNewsArticlesByScore)
@@ -39,7 +43,7 @@ func (controller *NewsController) createNewsArticle(ctx *gin.Context) {
 	var newsArticleInput []NewsArticleUserInuut
 	bindingErro := ctx.ShouldBindJSON(&newsArticleInput)
 	if bindingErro != nil {
-		response.JSONResponse(ctx, bindingErro, nil)
+		response.JSONResponse(ctx, bindingErro, nil, nil, "")
 		return
 	}
 
@@ -47,41 +51,69 @@ func (controller *NewsController) createNewsArticle(ctx *gin.Context) {
 
 	service := _NewService(controller.DB, newsArticle)
 	err := service.CreateNewsArticle()
-	response.JSONResponse(ctx, err, nil)
+	if err != nil {
+		response.JSONResponse(ctx, err, nil, nil, "")
+	}
+	ctx.JSON(200, "succeed")
 }
 
 func (controller *NewsController) getNewsArticlesByCategory(ctx *gin.Context) {
 	var newsArticle []NewsArticle
 	category, _ := ctx.GetQuery("name")
-	fmt.Println(category)
+
+	cacheKey := fmt.Sprintf("v1:news:category:%v", category)
+	// check if data is rpesent in cache or not
+	val, err := redisservice.GetValueFromRedis(controller.Redis, cacheKey)
+	if err == redis.Nil {
+		var ans response.FinalResponse
+		temp, _ := json.Marshal(val)
+		json.Unmarshal(temp, &ans)
+		ctx.JSON(200, ans)
+		return
+	}
+	fmt.Println("db me jaa rha hain...")
 	service := _NewService(controller.DB, &newsArticle)
 	result, err := service.GetNewsArticlesByCategory(category)
 	if err != nil {
-		response.JSONResponse(ctx, err, result)
+		response.JSONResponse(ctx, err, result, nil, "")
 		return
 	}
-	response.JSONResponse(ctx, err, Convert_NewsArticle_To_NewsArticleResponse(result))
+	ConvertResultInProperFormatAndReturn(ctx, result, controller.Redis, cacheKey)
+
+	// response.JSONResponse(ctx, err, Convert_NewsArticle_To_NewsArticleResponse(result), controller.Redis, cacheKey)
 }
 
 func (controller *NewsController) getNewsArticlesByScore(ctx *gin.Context) {
 	var newsArticle []NewsArticle
 	x, founded := ctx.GetQuery("val")
 	if !founded {
-		response.JSONResponse(ctx, fmt.Errorf("query param score is not present"), nil)
+		response.JSONResponse(ctx, fmt.Errorf("query param score is not present"), nil, nil, "")
 		return
 	}
 	score, err := strconv.ParseFloat(x, 64)
 	if err != nil {
-		response.JSONResponse(ctx, err, nil)
+		response.JSONResponse(ctx, err, nil, nil, "")
+		return
+	}
+
+	cacheKey := fmt.Sprintf("v1:news:score:%v", score)
+	// check if data is rpesent in cache or not
+	val, err := redisservice.GetValueFromRedis(controller.Redis, cacheKey)
+	if err == redis.Nil {
+		var ans response.FinalResponse
+		temp, _ := json.Marshal(val)
+		json.Unmarshal(temp, &ans)
+		ctx.JSON(200, ans)
 		return
 	}
 	service := _NewService(controller.DB, &newsArticle)
 	result, err := service.GetNewsArticlesByScore(score)
 	if err != nil {
-		response.JSONResponse(ctx, err, result)
+		response.JSONResponse(ctx, err, result, nil, "")
 		return
 	}
-	response.JSONResponse(ctx, err, Convert_NewsArticle_To_NewsArticleResponse(result))
+	// response.JSONResponse(ctx, err, Convert_NewsArticle_To_NewsArticleResponse(result))
+	ConvertResultInProperFormatAndReturn(ctx, result, controller.Redis, cacheKey)
 }
 
 func (controller *NewsController) getNewsArticlesBySource(ctx *gin.Context) {
@@ -90,89 +122,115 @@ func (controller *NewsController) getNewsArticlesBySource(ctx *gin.Context) {
 	// source, _ := strconv.ParseFloat(x, 64)
 	fmt.Println("source ", source)
 	// source = "ANI News"
+
+	cacheKey := fmt.Sprintf("v1:news:source:%v", source)
+	// check if data is rpesent in cache or not
+	val, err := redisservice.GetValueFromRedis(controller.Redis, cacheKey)
+	if err == redis.Nil {
+		var ans response.FinalResponse
+		temp, _ := json.Marshal(val)
+		json.Unmarshal(temp, &ans)
+		ctx.JSON(200, ans)
+		return
+	}
 	service := _NewService(controller.DB, &newsArticle)
 	result, err := service.GetNewsArticlesBySource(source)
 	if err != nil {
-		response.JSONResponse(ctx, err, result)
+		response.JSONResponse(ctx, err, result, nil, "")
 		return
 	}
-	response.JSONResponse(ctx, err, Convert_NewsArticle_To_NewsArticleResponse(result))
+	// response.JSONResponse(ctx, err, Convert_NewsArticle_To_NewsArticleResponse(result))
+	ConvertResultInProperFormatAndReturn(ctx, result, controller.Redis, cacheKey)
 }
 
 func (controller *NewsController) getNearByNewsArticle(ctx *gin.Context) {
 	var newsArticle []NewsArticle
 	x, founded := ctx.GetQuery("lat")
 	if !founded {
-		response.JSONResponse(ctx, fmt.Errorf("query param lat is not present"), nil)
+		response.JSONResponse(ctx, fmt.Errorf("query param lat is not present"), nil, nil, "")
 		return
 	}
 	y, founded := ctx.GetQuery("lon")
 	if !founded {
-		response.JSONResponse(ctx, fmt.Errorf("query param lon is not present"), nil)
+		response.JSONResponse(ctx, fmt.Errorf("query param lon is not present"), nil, nil, "")
 		return
 	}
 	z, founded := ctx.GetQuery("radius")
 	if !founded {
-		response.JSONResponse(ctx, fmt.Errorf("query param radius is not present"), nil)
+		response.JSONResponse(ctx, fmt.Errorf("query param radius is not present"), nil, nil, "")
 		return
 	}
 	lat, err := strconv.ParseFloat(x, 64)
 	if err != nil {
-		response.JSONResponse(ctx, err, nil)
+		response.JSONResponse(ctx, err, nil, nil, "")
 	}
 	lon, err := strconv.ParseFloat(y, 64)
 	if err != nil {
-		response.JSONResponse(ctx, err, nil)
+		response.JSONResponse(ctx, err, nil, nil, "")
 	}
 	radius, err := strconv.ParseFloat(z, 64)
 	if err != nil {
-		response.JSONResponse(ctx, err, nil)
+		response.JSONResponse(ctx, err, nil, nil, "")
 	}
 	fmt.Println("lat, log, radius", lat, lon, radius)
 
+	cacheKey := fmt.Sprintf("v1:news:nearby:lat%v:lon%v:radius%v", lat, lon, radius)
+	// check if data is rpesent in cache or not
+	val, err := redisservice.GetValueFromRedis(controller.Redis, cacheKey)
+	if err == redis.Nil {
+		var ans response.FinalResponse
+		temp, _ := json.Marshal(val)
+		json.Unmarshal(temp, &ans)
+		ctx.JSON(200, ans)
+		return
+	}
 	service := _NewService(controller.DB, &newsArticle)
 	result, err := service.GetNearByNewsArticle(lat, lon, radius)
 	if err != nil {
-		response.JSONResponse(ctx, err, result)
+		response.JSONResponse(ctx, err, result, nil, "")
 		return
 	}
-	updatedResponse := Convert_NewsArticle_To_NewsArticleResponse(result)
-	// var summaries []string
-	// for i := 0; i < len(*updatedResponse); i++ {
-	// 	haha := llmservice.GenerateSummeryLLM((*updatedResponse)[i].Title, (*updatedResponse)[i].Description)
-	// 	(*updatedResponse)[i].LLMSummery = haha
-	// }
-	response.JSONResponse(ctx, err, updatedResponse)
+	ConvertResultInProperFormatAndReturn(ctx, result, controller.Redis, cacheKey)
 }
 
 func (controller *NewsController) getNewsArticleBySearch(ctx *gin.Context) {
 	query, founded := ctx.GetQuery("query")
 	if !founded {
-		response.JSONResponse(ctx, fmt.Errorf("query param search not founded"), nil)
+		response.JSONResponse(ctx, fmt.Errorf("query param search not founded"), nil, nil, "")
 		return
 	}
 
 	llmOutput, err := llmservice.FindLLMEntity(query)
 	if err != nil {
-		response.JSONResponse(ctx, err, nil)
+		response.JSONResponse(ctx, err, nil, nil, "")
 		return
 	}
+	cacheKey := fmt.Sprintf("v1:news:query:%v", llmOutput.Entities)
+	// check if data is rpesent in cache or not
+	val, err := redisservice.GetValueFromRedis(controller.Redis, cacheKey)
+	if err == redis.Nil {
+		var ans response.FinalResponse
+		temp, _ := json.Marshal(val)
+		json.Unmarshal(temp, &ans)
+		ctx.JSON(200, ans)
+		return
+	}
+	fmt.Println("db me jaa rha h bhai")
 	service := _NewService(controller.DB, &[]NewsArticle{})
 	res, err := service.GetNewsArticleBySearch(llmOutput)
 	if err != nil {
-		response.JSONResponse(ctx, err, nil)
+		response.JSONResponse(ctx, err, nil, nil, "")
 		return
 	}
-	response.JSONResponse(ctx, err, Convert_NewsArticle_To_NewsArticleResponse(res))
-	// ConvertResultInProperFormatAndReturn(ctx, re)
+	ConvertResultInProperFormatAndReturn(ctx, res, controller.Redis, cacheKey)
 }
 
-func ConvertResultInProperFormatAndReturn(ctx *gin.Context, result *[]NewsArticle) {
+func ConvertResultInProperFormatAndReturn(ctx *gin.Context, result *[]NewsArticle, redisClient *redis.Client, cacheKey string) {
 	finalResult := Convert_NewsArticle_To_NewsArticleResponse(result)
 	// generate llm summery
 	for i := 0; i < len(*finalResult); i++ {
 		summery := llmservice.GenerateSummeryLLM((*finalResult)[i].Title, (*finalResult)[i].Description)
 		(*finalResult)[i].LLMSummery = summery
 	}
-	response.JSONResponse(ctx, nil, finalResult)
+	response.JSONResponse(ctx, nil, finalResult, redisClient, cacheKey)
 }

@@ -1,9 +1,12 @@
 package response
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis"
+	redisservice "github.com/sukvij/inshorts/inshortfers/redis-service"
 )
 
 type AppError struct {
@@ -16,6 +19,9 @@ type Meta struct {
 	Version     string `json:"version"`
 	LatencyMs   int64  `json:"latencyMs"`
 	Environment string `json:"environment,omitempty"`
+	TotalPages  int    `json:"total_pages"`
+	PageNumber  int    `json:"page_number"`
+	Query       string `json:"query"`
 	// Pagination  *Pagination `json:"pagination,omitempty"`
 	// RateLimit   *RateLimit  `json:"rateLimit,omitempty"`
 }
@@ -41,11 +47,15 @@ type FinalResponse struct {
 	Meta       *Meta     `json:"meta"`
 }
 
-func JSONResponse(ctx *gin.Context, err error, data interface{}) {
+func JSONResponse(ctx *gin.Context, err error, data interface{}, redisClinet *redis.Client, cacheKey string) {
 	response := &FinalResponse{Data: data, Meta: &Meta{}}
 	if err == nil {
 		response.Success = true
 		response.StatusCode = 200
+		if data != nil {
+			err1 := redisservice.SetValueToRedis(redisClinet, cacheKey, *response)
+			fmt.Println(cacheKey, err1)
+		}
 		ctx.JSON(response.StatusCode, response)
 		return
 	}
