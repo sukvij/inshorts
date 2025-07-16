@@ -163,8 +163,32 @@ func (repo *NewsRepository) GetNewsArticleBySearch(whereClause string, arg []int
 
 	var totalRecords int64
 	// find total records
-	repo.DB.Raw(sqlQuery, variable, variable, variable).Count(&totalRecords)
+	repo.DB.Raw(QueryFindNumberOfRecords(), variable, variable, variable).Count(&totalRecords)
 	fmt.Println("totalrec", totalRecords)
 
 	return &result, totalRecords, queryDetails, nil
+}
+
+func QueryFindNumberOfRecords() string {
+	sqlQuery := `
+	SELECT
+			COUNT(*) AS total
+		FROM
+        (SELECT
+            id,
+            -- Calculate the text matching score using MATCH AGAINST in NATURAL LANGUAGE MODE
+            MATCH (p.title, p.description) AGAINST (? IN NATURAL LANGUAGE MODE) AS text_match_score,
+            -- Calculate the combined score using weights
+            (COALESCE(p.relevance_score, 0.0) * 0.7) +
+            (MATCH (p.title, p.description) AGAINST (? IN NATURAL LANGUAGE MODE) * 0.3) AS combined_score
+        FROM
+            news_articles AS p
+        WHERE
+            -- Ensure at least one match for the query terms
+            MATCH (p.title, p.description) AGAINST (? IN NATURAL LANGUAGE MODE)
+        ORDER BY
+            combined_score DESC,    -- Primary sort by the combined ranking score (highest first)
+            p.relevance_score DESC) AS subquery
+    `
+	return sqlQuery
 }

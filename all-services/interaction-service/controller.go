@@ -57,7 +57,7 @@ func (controller *InteractionController) trendingNewsArticles(ctx *gin.Context) 
 	limit := ctx.Query("limit")
 	lat1, _ := strconv.ParseFloat(lat, 64)
 	lon1, _ := strconv.ParseFloat(lon, 64)
-	radiusMeters := 100000
+	radiusMeters := 10000000
 	limit1, _ := strconv.Atoi(limit)
 	geohashPrecision := 6
 	geoHashKey := geohash.EncodeWithPrecision(lat1, lon1, uint(geohashPrecision))
