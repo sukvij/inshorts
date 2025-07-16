@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis"
 	"github.com/mmcloughlin/geohash"
-	llmservice "github.com/sukvij/inshorts/all-services/llm-service"
 	newsservice "github.com/sukvij/inshorts/all-services/news-service"
 	"github.com/sukvij/inshorts/inshortfers/logs"
 	redisservice "github.com/sukvij/inshorts/inshortfers/redis-service"
@@ -40,15 +39,16 @@ func (controller *InteractionController) createUserInteraction(ctx *gin.Context)
 	err := ctx.ShouldBindJSON(&interactions)
 	if err != nil {
 		controller.Logs.Error(err)
-		response.JSONResponse(ctx, err, nil, nil, "")
+		response.JSONResponse(ctx, err, nil, nil, "", 0, "")
 		return
 	}
 	service := _NewService(controller.DB, &interactions, controller.Redis)
 	err = service.CreateUserInteraction()
 	if err != nil {
 		controller.Logs.Error(err)
+		response.JSONResponse(ctx, err, nil, nil, "", 0, "")
 	}
-	response.JSONResponse(ctx, err, nil, controller.Redis, "")
+	ctx.JSON(200, "succeed")
 }
 
 func (controller *InteractionController) trendingNewsArticles(ctx *gin.Context) {
@@ -75,21 +75,23 @@ func (controller *InteractionController) trendingNewsArticles(ctx *gin.Context) 
 	}
 	fmt.Println("database me jaa rha h matlab --> redis khali")
 	service := _NewService(controller.DB, &[]UserInteraction{}, controller.Redis)
-	result, err := service.TrendingNewsArticles(lat1, lon1, limit1, cacheKey, radiusMeters)
+	result, err, totalRecords, queryDetails := service.TrendingNewsArticles(lat1, lon1, limit1, cacheKey, radiusMeters)
 	if err != nil {
 		controller.Logs.Error(err)
-		response.JSONResponse(ctx, err, nil, nil, "")
+		response.JSONResponse(ctx, err, nil, nil, "", 0, "")
 		return
 	}
-	ConvertResultInProperFormatAndReturn(ctx, result, controller.Redis, cacheKey)
+
+	fmt.Println("bro query details are here ", queryDetails)
+	ConvertResultInProperFormatAndReturn(ctx, result, controller.Redis, cacheKey, totalRecords, queryDetails)
 }
 
-func ConvertResultInProperFormatAndReturn(ctx *gin.Context, result *[]newsservice.NewsArticle, redisClient *redis.Client, cacheKey string) {
+func ConvertResultInProperFormatAndReturn(ctx *gin.Context, result *[]newsservice.NewsArticle, redisClient *redis.Client, cacheKey string, totalRecords int64, queryDetails string) {
 	finalResult := newsservice.Convert_NewsArticle_To_NewsArticleResponse(result)
 	// generate llm summery
-	for i := 0; i < len(*finalResult); i++ {
-		summery := llmservice.GenerateSummeryLLM((*finalResult)[i].Title, (*finalResult)[i].Description)
-		(*finalResult)[i].LLMSummery = summery
-	}
-	response.JSONResponse(ctx, nil, finalResult, redisClient, cacheKey)
+	// for i := 0; i < len(*finalResult); i++ {
+	// 	summery := llmservice.GenerateSummeryLLM((*finalResult)[i].Title, (*finalResult)[i].Description)
+	// 	(*finalResult)[i].LLMSummery = summery
+	// }
+	response.JSONResponse(ctx, nil, finalResult, redisClient, cacheKey, totalRecords, queryDetails)
 }

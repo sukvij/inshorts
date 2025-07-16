@@ -24,12 +24,11 @@ func (service *InteractionService) CreateUserInteraction() error {
 	return repo.CreateUserInteraction()
 }
 
-func (service *InteractionService) TrendingNewsArticles(lat, lon float64, limit int, cacheKey string, radiusMeter int) (*[]newsservice.NewsArticle, error) {
+func (service *InteractionService) TrendingNewsArticles(lat, lon float64, limit int, cacheKey string, radiusMeter int) (*[]newsservice.NewsArticle, error, int64, string) {
 
 	_, span := otel.Tracer("function controller").Start(context.Background(), "service redis data fetch")
 	defer span.End()
 
 	repo := _NewRepository(service.DB, service.Interactions)
-	res, errs := repo.TrendingNewsArticles(lat, lon, limit, radiusMeter)
-	return res, errs
+	return repo.TrendingNewsArticles(lat, lon, limit, radiusMeter)
 }

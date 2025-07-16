@@ -27,7 +27,7 @@ func (repo *InteractionRepository) CreateUserInteraction() error {
 	return nil
 }
 
-func (repo *InteractionRepository) TrendingNewsArticles(lat, lon float64, radiusMeters, limit int) (*[]newsservice.NewsArticle, error) {
+func (repo *InteractionRepository) TrendingNewsArticles(lat, lon float64, radiusMeters, limit int) (*[]newsservice.NewsArticle, error, int64, string) {
 	query := `
 				SELECT
 				na.id, na.title, na.description, na.url, na.publication_date, na.source_name, na.category, na.relevance_score, na.latitude, na.longitude,
@@ -75,10 +75,17 @@ func (repo *InteractionRepository) TrendingNewsArticles(lat, lon float64, radius
 	`
 	var radius int = radiusMeters // in meters
 	var result []newsservice.NewsArticle
-	err := repo.DB.Raw(query, lon, lat, radius, limit).Scan(&result).Error
+	temp := repo.DB.Raw(query, lon, lat, radius, limit).Scan(&result)
+	queryDetails := repo.DB.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		// Build the query without executing Scan here
+		return tx.Raw(query, lon, lat, radius, limit)
+	})
+	fmt.Println(queryDetails)
+	err := temp.Error
 	fmt.Println(result)
 	if err != nil {
-		return nil, err
+		return nil, err, 0, queryDetails
 	}
-	return &result, err
+	totalRecords := temp.RowsAffected
+	return &result, err, totalRecords, queryDetails
 }

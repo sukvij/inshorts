@@ -16,12 +16,12 @@ type AppError struct {
 }
 
 type Meta struct {
-	Version     string `json:"version"`
-	LatencyMs   int64  `json:"latencyMs"`
-	Environment string `json:"environment,omitempty"`
-	TotalPages  int    `json:"total_pages"`
-	PageNumber  int    `json:"page_number"`
-	Query       string `json:"query"`
+	Version      string `json:"version"`
+	LatencyMs    int64  `json:"latencyMs"`
+	Environment  string `json:"environment,omitempty"`
+	TotalRecords int64  `json:"total_records"`
+	PageNumber   int    `json:"page_number"`
+	Query        string `json:"query"`
 	// Pagination  *Pagination `json:"pagination,omitempty"`
 	// RateLimit   *RateLimit  `json:"rateLimit,omitempty"`
 }
@@ -47,8 +47,8 @@ type FinalResponse struct {
 	Meta       *Meta     `json:"meta"`
 }
 
-func JSONResponse(ctx *gin.Context, err error, data interface{}, redisClinet *redis.Client, cacheKey string) {
-	response := &FinalResponse{Data: data, Meta: &Meta{}}
+func JSONResponse(ctx *gin.Context, err error, data interface{}, redisClinet *redis.Client, cacheKey string, totalRecords int64, queryDetails string) {
+	response := &FinalResponse{Data: data, Meta: &Meta{TotalRecords: totalRecords, Query: queryDetails}}
 	if err == nil {
 		response.Success = true
 		response.StatusCode = 200

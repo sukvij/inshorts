@@ -43,7 +43,7 @@ func (controller *NewsController) createNewsArticle(ctx *gin.Context) {
 	var newsArticleInput []NewsArticleUserInuut
 	bindingErro := ctx.ShouldBindJSON(&newsArticleInput)
 	if bindingErro != nil {
-		response.JSONResponse(ctx, bindingErro, nil, nil, "")
+		response.JSONResponse(ctx, bindingErro, nil, nil, "", 0, "")
 		return
 	}
 
@@ -52,7 +52,7 @@ func (controller *NewsController) createNewsArticle(ctx *gin.Context) {
 	service := _NewService(controller.DB, newsArticle)
 	err := service.CreateNewsArticle()
 	if err != nil {
-		response.JSONResponse(ctx, err, nil, nil, "")
+		response.JSONResponse(ctx, err, nil, nil, "", 0, "")
 	}
 	ctx.JSON(200, "succeed")
 }
@@ -75,7 +75,7 @@ func (controller *NewsController) getNewsArticlesByCategory(ctx *gin.Context) {
 	service := _NewService(controller.DB, &newsArticle)
 	result, err := service.GetNewsArticlesByCategory(category)
 	if err != nil {
-		response.JSONResponse(ctx, err, result, nil, "")
+		response.JSONResponse(ctx, err, result, nil, "", 0, "")
 		return
 	}
 	ConvertResultInProperFormatAndReturn(ctx, result, controller.Redis, cacheKey)
@@ -87,12 +87,12 @@ func (controller *NewsController) getNewsArticlesByScore(ctx *gin.Context) {
 	var newsArticle []NewsArticle
 	x, founded := ctx.GetQuery("val")
 	if !founded {
-		response.JSONResponse(ctx, fmt.Errorf("query param score is not present"), nil, nil, "")
+		response.JSONResponse(ctx, fmt.Errorf("query param score is not present"), nil, nil, "", 0, "")
 		return
 	}
 	score, err := strconv.ParseFloat(x, 64)
 	if err != nil {
-		response.JSONResponse(ctx, err, nil, nil, "")
+		response.JSONResponse(ctx, err, nil, nil, "", 0, "")
 		return
 	}
 
@@ -109,7 +109,7 @@ func (controller *NewsController) getNewsArticlesByScore(ctx *gin.Context) {
 	service := _NewService(controller.DB, &newsArticle)
 	result, err := service.GetNewsArticlesByScore(score)
 	if err != nil {
-		response.JSONResponse(ctx, err, result, nil, "")
+		response.JSONResponse(ctx, err, result, nil, "", 0, "")
 		return
 	}
 	// response.JSONResponse(ctx, err, Convert_NewsArticle_To_NewsArticleResponse(result))
@@ -136,7 +136,7 @@ func (controller *NewsController) getNewsArticlesBySource(ctx *gin.Context) {
 	service := _NewService(controller.DB, &newsArticle)
 	result, err := service.GetNewsArticlesBySource(source)
 	if err != nil {
-		response.JSONResponse(ctx, err, result, nil, "")
+		response.JSONResponse(ctx, err, result, nil, "", 0, "")
 		return
 	}
 	// response.JSONResponse(ctx, err, Convert_NewsArticle_To_NewsArticleResponse(result))
@@ -147,30 +147,30 @@ func (controller *NewsController) getNearByNewsArticle(ctx *gin.Context) {
 	var newsArticle []NewsArticle
 	x, founded := ctx.GetQuery("lat")
 	if !founded {
-		response.JSONResponse(ctx, fmt.Errorf("query param lat is not present"), nil, nil, "")
+		response.JSONResponse(ctx, fmt.Errorf("query param lat is not present"), nil, nil, "", 0, "")
 		return
 	}
 	y, founded := ctx.GetQuery("lon")
 	if !founded {
-		response.JSONResponse(ctx, fmt.Errorf("query param lon is not present"), nil, nil, "")
+		response.JSONResponse(ctx, fmt.Errorf("query param lon is not present"), nil, nil, "", 0, "")
 		return
 	}
 	z, founded := ctx.GetQuery("radius")
 	if !founded {
-		response.JSONResponse(ctx, fmt.Errorf("query param radius is not present"), nil, nil, "")
+		response.JSONResponse(ctx, fmt.Errorf("query param radius is not present"), nil, nil, "", 0, "")
 		return
 	}
 	lat, err := strconv.ParseFloat(x, 64)
 	if err != nil {
-		response.JSONResponse(ctx, err, nil, nil, "")
+		response.JSONResponse(ctx, err, nil, nil, "", 0, "")
 	}
 	lon, err := strconv.ParseFloat(y, 64)
 	if err != nil {
-		response.JSONResponse(ctx, err, nil, nil, "")
+		response.JSONResponse(ctx, err, nil, nil, "", 0, "")
 	}
 	radius, err := strconv.ParseFloat(z, 64)
 	if err != nil {
-		response.JSONResponse(ctx, err, nil, nil, "")
+		response.JSONResponse(ctx, err, nil, nil, "", 0, "")
 	}
 	fmt.Println("lat, log, radius", lat, lon, radius)
 
@@ -187,7 +187,7 @@ func (controller *NewsController) getNearByNewsArticle(ctx *gin.Context) {
 	service := _NewService(controller.DB, &newsArticle)
 	result, err := service.GetNearByNewsArticle(lat, lon, radius)
 	if err != nil {
-		response.JSONResponse(ctx, err, result, nil, "")
+		response.JSONResponse(ctx, err, result, nil, "", 0, "")
 		return
 	}
 	ConvertResultInProperFormatAndReturn(ctx, result, controller.Redis, cacheKey)
@@ -196,13 +196,13 @@ func (controller *NewsController) getNearByNewsArticle(ctx *gin.Context) {
 func (controller *NewsController) getNewsArticleBySearch(ctx *gin.Context) {
 	query, founded := ctx.GetQuery("query")
 	if !founded {
-		response.JSONResponse(ctx, fmt.Errorf("query param search not founded"), nil, nil, "")
+		response.JSONResponse(ctx, fmt.Errorf("query param search not founded"), nil, nil, "", 0, "")
 		return
 	}
 
 	llmOutput, err := llmservice.FindLLMEntity(query)
 	if err != nil {
-		response.JSONResponse(ctx, err, nil, nil, "")
+		response.JSONResponse(ctx, err, nil, nil, "", 0, "")
 		return
 	}
 	cacheKey := fmt.Sprintf("v1:news:query:%v", llmOutput.Entities)
@@ -219,7 +219,7 @@ func (controller *NewsController) getNewsArticleBySearch(ctx *gin.Context) {
 	service := _NewService(controller.DB, &[]NewsArticle{})
 	res, err := service.GetNewsArticleBySearch(llmOutput)
 	if err != nil {
-		response.JSONResponse(ctx, err, nil, nil, "")
+		response.JSONResponse(ctx, err, nil, nil, "", 0, "")
 		return
 	}
 	ConvertResultInProperFormatAndReturn(ctx, res, controller.Redis, cacheKey)
@@ -228,9 +228,9 @@ func (controller *NewsController) getNewsArticleBySearch(ctx *gin.Context) {
 func ConvertResultInProperFormatAndReturn(ctx *gin.Context, result *[]NewsArticle, redisClient *redis.Client, cacheKey string) {
 	finalResult := Convert_NewsArticle_To_NewsArticleResponse(result)
 	// generate llm summery
-	for i := 0; i < len(*finalResult); i++ {
-		summery := llmservice.GenerateSummeryLLM((*finalResult)[i].Title, (*finalResult)[i].Description)
-		(*finalResult)[i].LLMSummery = summery
-	}
-	response.JSONResponse(ctx, nil, finalResult, redisClient, cacheKey)
+	// for i := 0; i < len(*finalResult); i++ {
+	// 	summery := llmservice.GenerateSummeryLLM((*finalResult)[i].Title, (*finalResult)[i].Description)
+	// 	(*finalResult)[i].LLMSummery = summery
+	// }
+	response.JSONResponse(ctx, nil, finalResult, redisClient, cacheKey, 0, "")
 }
