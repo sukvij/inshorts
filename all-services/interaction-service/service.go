@@ -1,6 +1,7 @@
 package interactionservice
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	"github.com/mmcloughlin/geohash"
 	newsservice "github.com/sukvij/inshorts/all-services/news-service"
 	redisservice "github.com/sukvij/inshorts/inshortfers/redis-service"
+	"go.opentelemetry.io/otel"
 	"gorm.io/gorm"
 )
 
@@ -37,6 +39,8 @@ func (service *InteractionService) TrendingNewsArticles(lat, lon, limit string) 
 	cacheKey := fmt.Sprintf("trending:%s:limit%d:radius%d", geoHashKey, limit1, radiusMeters)
 	fmt.Println("key is this bro", cacheKey)
 
+	childContext, span := otel.Tracer("function controller").Start(context.Background(), "service redis data fetch")
+	defer span.End()
 	// check if data is rpesent in cache or not
 	val, err := redisservice.GetValueFromRedis(service.Redis, cacheKey)
 	if err == redis.Nil {
@@ -46,6 +50,8 @@ func (service *InteractionService) TrendingNewsArticles(lat, lon, limit string) 
 		return &ans, nil
 	}
 	fmt.Println("database me jaa rha h matlab --> redis khali")
+	_, span1 := otel.Tracer("function controller").Start(childContext, "database fetched ")
+	defer span1.End()
 	repo := _NewRepository(service.DB, service.Interactions)
 	res, errs := repo.TrendingNewsArticles(lat1, lon1, limit1, radiusMeters)
 	if errs == nil {

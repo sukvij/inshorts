@@ -36,7 +36,7 @@ type Meta struct {
 type FinalResponse struct {
 	Success    bool      `json:"success"`
 	StatusCode int       `json:"statusCode"`
-	Data       any       `json:"data,omitempty"`
+	Data       any       `json:"articles,omitempty"`
 	Error      *AppError `json:"error,omitempty"`
 	Meta       *Meta     `json:"meta"`
 }

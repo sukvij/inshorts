@@ -164,4 +164,15 @@ func (controller *NewsController) getNewsArticleBySearch(ctx *gin.Context) {
 		return
 	}
 	response.JSONResponse(ctx, err, Convert_NewsArticle_To_NewsArticleResponse(res))
+	// ConvertResultInProperFormatAndReturn(ctx, re)
+}
+
+func ConvertResultInProperFormatAndReturn(ctx *gin.Context, result *[]NewsArticle) {
+	finalResult := Convert_NewsArticle_To_NewsArticleResponse(result)
+	// generate llm summery
+	for i := 0; i < len(*finalResult); i++ {
+		summery := llmservice.GenerateSummeryLLM((*finalResult)[i].Title, (*finalResult)[i].Description)
+		(*finalResult)[i].LLMSummery = summery
+	}
+	response.JSONResponse(ctx, nil, finalResult)
 }
