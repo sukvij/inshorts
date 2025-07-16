@@ -1,0 +1,14 @@
+[
+{"user_id":"a1b2c3d4-e5f6-7890-abcd-ef1234567890","article_id":"c0f88c9b-b887-4d31-b3ac-6311eb65d87f","event_type":"view","user_lat":40.7128,"user_lon":-74.0060},
+    {"user_id":"b2c3d4e5-f6a7-8901-bcde-f2345678901","article_id":"e25c022a-b644-4207-bcce-9fffcaca419f","event_type":"click","user_lat":51.5074,"user_lon":-0.1278},
+    {"user_id":"c3d4e5f6-a7b8-9012-cdef-3456789012","article_id":"e8cf1038-170c-478d-8467-e55e6267990e","event_type":"like","user_lat":35.6762,"user_lon":139.6503},
+    {"user_id":"d4e5f6a7-b8c9-0123-def0-4567890123","article_id":"ee0125de-0f5c-4b48-a516-7ff8ba21fafe","event_type":"share","user_lat":-33.8688,"user_lon":151.2093},
+    {"user_id":"e5f6a7b8-c9d0-1234-ef01-5678901234","article_id":"f48e6eb6-cb20-49b9-b6d6-9a2ad4ae5b18","event_type":"view","user_lat":48.8566,"user_lon":2.3522},
+    {"user_id":"f6a7b8c9-d0e1-2345-f012-6789012345","article_id":"1f408e3f-a3fa-48af-9414-2d27f743a658","event_type":"click","user_lat":55.7558,"user_lon":37.6173},
+    {"user_id":"a7b8c9d0-e1f2-3456-0123-7890123456","article_id":"24a28498-5a1a-4d6c-8d77-11517b2c71f8","event_type":"like","user_lat":19.4326,"user_lon":-99.1332},
+    {"user_id":"b8c9d0e1-f2a3-4567-1234-8901234567","article_id":"3309b572-99d7-4cb7-b7f0-e492edc43052","event_type":"share","user_lat":39.9042,"user_lon":116.4074},
+    {"user_id":"c9d0e1f2-a3b4-5678-2345-9012345678","article_id":"39b05cac-d55a-4c60-8249-1418dc4f79b0","event_type":"view","user_lat":-23.5505,"user_lon":-46.6333},
+    {"user_id":"d0e1f2a3-b4c5-6789-3456-0123456789","article_id":"4903d1e2-8f54-468c-a44c-b6794957f9f0","event_type":"click","user_lat":28.6139,"user_lon":77.2090},
+    {"user_id":"e1f2a3b4-c5d6-7890-4567-1234567890","article_id":"65f744ba-64c7-4860-9df0-24057b28bb60","event_type":"like","user_lat":52.5200,"user_lon":13.4050},
+    {"user_id":"f2a3b4c5-d6e7-8901-5678-2345678901","article_id":"89f41e06-d5df-41d7-86cf-4c48cae70fd9","event_type":"share","user_lat":41.9028,"user_lon":12.4964}
+]
