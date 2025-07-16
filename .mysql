@@ -88,3 +88,4 @@ CREATE TABLE user_interactions (
 --     combined_trending_score DESC, 
 --     na.relevance_score DESC,      
 --     na.id ASC;                    
+

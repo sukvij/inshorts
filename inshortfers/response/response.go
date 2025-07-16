@@ -3,6 +3,7 @@ package response
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis"
@@ -48,7 +49,7 @@ type FinalResponse struct {
 }
 
 func JSONResponse(ctx *gin.Context, err error, data interface{}, redisClinet *redis.Client, cacheKey string, totalRecords int64, queryDetails string) {
-	response := &FinalResponse{Data: data, Meta: &Meta{TotalRecords: totalRecords, Query: queryDetails}}
+	response := &FinalResponse{Data: data, Meta: &Meta{TotalRecords: totalRecords, Query: RemoveExtraFromQuery(queryDetails)}}
 	if err == nil {
 		response.Success = true
 		response.StatusCode = 200
@@ -65,4 +66,10 @@ func JSONResponse(ctx *gin.Context, err error, data interface{}, redisClinet *re
 		return
 	}
 	ctx.JSON(response.StatusCode, response)
+}
+
+func RemoveExtraFromQuery(query string) string {
+	cleanedString := strings.ReplaceAll(query, "\t", " ")
+	cleanedString = strings.ReplaceAll(cleanedString, "\n", "")
+	return cleanedString
 }

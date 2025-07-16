@@ -22,27 +22,27 @@ func (service *NewsService) CreateNewsArticle() error {
 	return repo.CreateNewsArticle()
 }
 
-func (service *NewsService) GetNewsArticlesByCategory(category string) (*[]NewsArticle, error) {
+func (service *NewsService) GetNewsArticlesByCategory(category string) (*[]NewsArticle, int64, string, error) {
 	repo := _NewRepository(service.DB, service.NewsArticle)
 	return repo.GetNewsArticlesByCategory(category)
 }
 
-func (service *NewsService) GetNewsArticlesByScore(score float64) (*[]NewsArticle, error) {
+func (service *NewsService) GetNewsArticlesByScore(score float64) (*[]NewsArticle, int64, string, error) {
 	repo := _NewRepository(service.DB, service.NewsArticle)
 	return repo.GetNewsArticlesByScore(score)
 }
 
-func (service *NewsService) GetNewsArticlesBySource(source string) (*[]NewsArticle, error) {
+func (service *NewsService) GetNewsArticlesBySource(source string) (*[]NewsArticle, int64, string, error) {
 	repo := _NewRepository(service.DB, service.NewsArticle)
 	return repo.GetNewsArticlesBySource(source)
 }
 
-func (service *NewsService) GetNearByNewsArticle(lat, lon, radius float64) (*[]NewsArticle, error) {
+func (service *NewsService) GetNearByNewsArticle(lat, lon, radius float64) (*[]NewsArticle, int64, string, error) {
 	repo := _NewRepository(service.DB, service.NewsArticle)
 	return repo.GetNearByNewsArticle(lat, lon, radius)
 }
 
-func (service *NewsService) GetNewsArticleBySearch(llmOutput *llmservice.ParsedLLMOutput) (*[]NewsArticle, error) {
+func (service *NewsService) GetNewsArticleBySearch(llmOutput *llmservice.ParsedLLMOutput) (*[]NewsArticle, int64, string, error) {
 	// funny business
 	fmt.Println("llmOutput.Entities ", llmOutput.Entities)
 	searchTerms := []string{}
@@ -54,7 +54,7 @@ func (service *NewsService) GetNewsArticleBySearch(llmOutput *llmservice.ParsedL
 	}
 
 	if len(searchTerms) == 0 {
-		return nil, fmt.Errorf("empty result") // No search terms, return empty slice
+		return nil, 0, "", fmt.Errorf("empty result") // No search terms, return empty slice
 	}
 
 	// (LOWER(title) LIKE '%term1%' OR LOWER(description) LIKE '%term1%') OR

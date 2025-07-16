@@ -27,54 +27,75 @@ func (repo *NewsRepository) CreateNewsArticle() error {
 	return nil
 }
 
-func (repo *NewsRepository) GetNewsArticlesByCategory(category string) (*[]NewsArticle, error) {
+func (repo *NewsRepository) GetNewsArticlesByCategory(category string) (*[]NewsArticle, int64, string, error) {
 	marshaledCategory, err1 := json.Marshal(category)
 	if err1 != nil {
-		return nil, err1
+		return nil, 0, "", err1
 	}
 	var result []NewsArticle
 
-	// Use GORM's Where clause with MySQL's JSON_CONTAINS function.
-	// JSON_CONTAINS(json_doc, val) returns 1 if val is found in json_doc.
+	queryDetails := repo.DB.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		return tx.Model(&NewsArticle{}).Where("JSON_CONTAINS(category, ?)", string(marshaledCategory)).Order("publication_date desc").Limit(1).Find(&NewsArticle{})
+	})
+	fmt.Println(queryDetails)
+	var totalRecords int64
+	// find total records
+	repo.DB.Model(&NewsArticle{}).Where("JSON_CONTAINS(category, ?)", string(marshaledCategory)).Count(&totalRecords)
 	err := repo.DB.Where("JSON_CONTAINS(category, ?)", string(marshaledCategory)).Order("publication_date desc").Limit(1).Find(&result).Error
 
 	if err != nil {
-		return nil, err
+		return nil, 0, "", err
 	}
-
-	return &result, nil
+	return &result, totalRecords, queryDetails, nil
 }
 
-func (repo *NewsRepository) GetNewsArticlesByScore(score float64) (*[]NewsArticle, error) {
+func (repo *NewsRepository) GetNewsArticlesByScore(score float64) (*[]NewsArticle, int64, string, error) {
 	var result []NewsArticle
+
+	queryDetails := repo.DB.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		return tx.Model(&NewsArticle{}).Where("relevance_score > ?", score).Order("relevance_score desc").Limit(1).Find(&NewsArticle{})
+	})
+
+	var totalRecords int64
+	// find total records
+	repo.DB.Model(&NewsArticle{}).Where("relevance_score > ?", score).Count(&totalRecords)
 	err := repo.DB.Where("relevance_score > ?", score).Order("relevance_score desc").Limit(1).Find(&result).Error
 	if err != nil {
-		return nil, err
+		return nil, 0, "", err
 	}
-	return &result, nil
+	return &result, totalRecords, queryDetails, nil
 }
 
-func (repo *NewsRepository) GetNewsArticlesBySource(source string) (*[]NewsArticle, error) {
+func (repo *NewsRepository) GetNewsArticlesBySource(source string) (*[]NewsArticle, int64, string, error) {
 	var result []NewsArticle
+
+	queryDetails := repo.DB.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		return tx.Model(&NewsArticle{}).Where("source_name = ?", source).Order("publication_date desc").Limit(1).Find(&NewsArticle{})
+	})
+
+	var totalRecords int64
+	// find total records
+	repo.DB.Model(&NewsArticle{}).Where("source_name = ?", source).Order("publication_date desc").Count(&totalRecords)
+
 	err := repo.DB.Where("source_name = ?", source).Order("publication_date desc").Limit(1).Find(&result).Error
 	if err != nil {
-		return nil, err
+		return nil, 0, "", err
 	}
-	return &result, nil
+	return &result, totalRecords, queryDetails, nil
 }
 
-func (repo *NewsRepository) GetNearByNewsArticle(lat, lon, radius float64) (*[]NewsArticle, error) {
+func (repo *NewsRepository) GetNearByNewsArticle(lat, lon, radius float64) (*[]NewsArticle, int64, string, error) {
 	var result []NewsArticle
 
-	query := fmt.Sprintf(`
+	query := `
 								SELECT
 								*,
 								(
 									6371 * -- Earth's radius in kilometers
 									ACOS(
-										COS(RADIANS(%v)) * COS(RADIANS(latitude)) *
-										COS(RADIANS(longitude) - RADIANS(%v)) +
-										SIN(RADIANS(%v)) * SIN(RADIANS(latitude))
+										COS(RADIANS( ? )) * COS(RADIANS(latitude)) *
+										COS(RADIANS(longitude) - RADIANS( ? )) +
+										SIN(RADIANS( ? )) * SIN(RADIANS(latitude))
 									)
 								) AS distance 
 							FROM
@@ -83,26 +104,31 @@ func (repo *NewsRepository) GetNearByNewsArticle(lat, lon, radius float64) (*[]N
 								(
 									6371 * -- Earth's radius in kilometers
 									ACOS(
-										COS(RADIANS(%v)) * COS(RADIANS(latitude)) *
-										COS(RADIANS(longitude) - RADIANS(%v)) +
-										SIN(RADIANS(%v)) * SIN(RADIANS(latitude))
+										COS(RADIANS( ? )) * COS(RADIANS(latitude)) *
+										COS(RADIANS(longitude) - RADIANS( ? )) +
+										SIN(RADIANS( ? )) * SIN(RADIANS(latitude))
 									)
-								) <= %v 
-							ORDER BY
-								distance 
-							LIMIT 1;
-								
-								`, lat, lon, lat, lat, lon, lat, radius)
-
-	err := repo.DB.Raw(query).Scan(&result).Error
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch points of interest within radius: %w", err)
+								) <= ?   -- here radius is in km
+							
+								`
+	original_query := fmt.Sprintf(`%v  ORDER BY distance limit 4`, query)
+	temp := repo.DB.Raw(original_query, lat, lon, lat, lat, lon, lat, radius).Scan(&result)
+	if temp.Error != nil {
+		return nil, 0, "", fmt.Errorf("failed to fetch points of interest within radius: %w", temp.Error)
 	}
 
-	return &result, nil
+	queryDetails := repo.DB.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		return tx.Raw(original_query, lat, lon, lat, lat, lon, lat, radius).Find(&NewsArticle{})
+	})
+
+	// var totalRecords int64
+	// find total records
+	totalRecords := repo.DB.Model(&NewsArticle{}).Raw(query, lat, lon, lat, lat, lon, lat, radius).Scan(&NewsArticle{}).RowsAffected
+	fmt.Println(totalRecords)
+	return &result, totalRecords, queryDetails, nil
 }
 
-func (repo *NewsRepository) GetNewsArticleBySearch(whereClause string, arg []interface{}) (*[]NewsArticle, error) {
+func (repo *NewsRepository) GetNewsArticleBySearch(whereClause string, arg []interface{}) (*[]NewsArticle, int64, string, error) {
 
 	variable := whereClause
 	sqlQuery := `
@@ -121,16 +147,24 @@ func (repo *NewsRepository) GetNewsArticleBySearch(whereClause string, arg []int
         ORDER BY
             combined_score DESC,    -- Primary sort by the combined ranking score (highest first)
             p.relevance_score DESC
-		LIMIT 1
     `
 
+	// originalQuery := sqlQuery + "limit 4"
+	originalQuery := fmt.Sprintf(`%v limit 4`, sqlQuery)
+	queryDetails := repo.DB.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		return tx.Raw(originalQuery, variable, variable, variable).Find(&NewsArticle{})
+	})
 	var result []NewsArticle
-	err := repo.DB.Raw(sqlQuery, variable, variable, variable).Limit(1).Scan(&result).Error
+	err := repo.DB.Raw(originalQuery, variable, variable, variable).Scan(&result).Error
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch articles from DB: %v", err)
+		return nil, 0, "", fmt.Errorf("failed to fetch articles from DB: %v", err)
 	}
-	// fmt.Println(result)
 
-	return &result, nil
+	var totalRecords int64
+	// find total records
+	repo.DB.Raw(sqlQuery, variable, variable, variable).Count(&totalRecords)
+	fmt.Println("totalrec", totalRecords)
+
+	return &result, totalRecords, queryDetails, nil
 }
