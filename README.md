@@ -11,6 +11,9 @@
 
     run --> go run main.go
 
+first run  **http://localhost:8080/v1/news**   POST --> create news articles        and
+**http://localhost:8080/v1/interaction**   POST create some interactions
+data is present in .json files in home directory.
 
 
 #  endpoints 
